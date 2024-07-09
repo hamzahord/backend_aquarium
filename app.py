@@ -6,6 +6,8 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -61,7 +63,6 @@ class Utilisateur(db.Model):
 class Fish(db.Model):
     __tablename__ = 'fish'
     id_fish = db.Column(db.BigInteger, primary_key=True)
-    name = db.Column(db.String(255))
     id_cat = db.Column(db.Integer, db.ForeignKey('ref_categorie.id_cat'))
     user_id = db.Column(db.Integer, db.ForeignKey('utilisateur.user_id'))
 
@@ -178,6 +179,31 @@ def get_aquarium_user():
         'nb_fish': aquarium.nb_fish
     }), 200
 
+
+@app.route('/chart/aquadata', methods=['GET'])
+@jwt_required()
+def get_aquadata_for_charts():
+    user_email = get_jwt_identity()
+    user = Utilisateur.query.filter_by(email=user_email).first()
+
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    aquadata_records = AquaData.query.filter(AquaData.user_id == user.user_id, AquaData.moment >= seven_days_ago).all()
+
+    data_by_day = defaultdict(lambda: {"ph": [], "temp": []})
+
+    for record in aquadata_records:
+        day = record.moment.date()
+        data_by_day[day]["ph"].append(record.ph)
+        data_by_day[day]["temp"].append(record.temperature)
+
+    sorted_days = sorted(data_by_day.keys())
+
+    response_data = {
+        "moment": [day.strftime("%Y-%m-%d %H:%M:%S") for day in sorted_days],  # Format date+heure pour chaque jour
+        "data": [{"ph": data_by_day[day]["ph"], "temp": data_by_day[day]["temp"]} for day in sorted_days]
+    }
+    
+    return jsonify(response_data), 200
 
 
 @app.route('/routes/protected/', methods=['GET'])
