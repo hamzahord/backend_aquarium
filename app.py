@@ -165,6 +165,7 @@ def aquarium_fish_creation():
 
 
 @app.route('/aqu/get', methods=['POST'])
+@jwt_required()
 def get_aquarium_user():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -192,7 +193,7 @@ def get_aquadata_for_charts():
     user_email = get_jwt_identity()
     user = Utilisateur.query.filter_by(email=user_email).first()
 
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.utcnow() - timedelta(days=9)
     aquadata_records = AquaData.query.filter(AquaData.user_id == user.user_id, AquaData.moment >= seven_days_ago).all()
 
     data_by_day = defaultdict(lambda: {"ph": [], "temp": []})
@@ -204,11 +205,29 @@ def get_aquadata_for_charts():
 
     sorted_days = sorted(data_by_day.keys())
 
+    labels = [day.strftime("%Y-%m-%d %H:%M:%S") for day in sorted_days]
+    data_ph = [data_by_day[day]["ph"][0] for day in sorted_days]  # Assuming one entry per day for simplicity
+    data_temp = [data_by_day[day]["temp"][0] for day in sorted_days]  # Assuming one entry per day for simplicity
+
     response_data = {
-        "moment": [day.strftime("%Y-%m-%d %H:%M:%S") for day in sorted_days],  # Format date+heure pour chaque jour
-        "data": [{"ph": data_by_day[day]["ph"], "temp": data_by_day[day]["temp"]} for day in sorted_days]
+        "data_ph": {
+            "labels": labels,
+            "datasets": [
+                {
+                    "data": data_ph,
+                }
+            ],
+        },
+        "data_temperature": {
+            "labels": labels,
+            "datasets": [
+                {
+                    "data": data_temp,
+                }
+            ],
+        },
     }
-    
+
     return jsonify(response_data), 200
 
 #IA
