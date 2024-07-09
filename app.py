@@ -8,6 +8,12 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from collections import defaultdict
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+import joblib
+from tensorflow.keras.models import load_model
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -205,12 +211,51 @@ def get_aquadata_for_charts():
     
     return jsonify(response_data), 200
 
+#IA
 
-@app.route('/routes/protected/', methods=['GET'])
+def predict_water_change_day(model, scaler, recent_data, seq_length=10, threshold=0.5):
+    features = ['pH', 'temperature', 'luminosity', 'turbidity']
+    
+    recent_data_scaled = scaler.transform(recent_data[features])
+    
+    if len(recent_data_scaled) < seq_length:
+        raise ValueError(f"La longueur des données récentes est insuffisante. Attendu au moins {seq_length} jours.")
+    
+    recent_sequence = recent_data_scaled[-seq_length:]
+    recent_sequence = np.array([recent_sequence])
+    
+    predictions = model.predict(recent_sequence)
+    print(predictions)
+    water_change_day = np.argmax(predictions <= threshold)
+    print(water_change_day)
+    
+    if water_change_day == 0:
+        return "Aujourd'hui"
+    elif water_change_day == 1:
+        return "Demain"
+    else:
+        return f'Dans {water_change_day} jours'
+    
+
+@app.route('/ia/predict/', methods=['GET'])
 @jwt_required()
-def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+def activate_prediction():
+    aquadata = AquaData.query.all()
+
+    df = pd.DataFrame([(data.moment, data.temperature, data.ph) for data in aquadata],
+                          columns=['pH', 'temperature', 'luminosity', 'turbidity'])
+        
+    model = load_model('aquarium_model.h5')
+    scaler = joblib.load('scaler.pkl')
+    
+    try:
+        prediction = predict_water_change_day(model, scaler, df)
+        res = f"Jour estimé pour changer l'eau : {prediction}"
+    except ValueError as e:
+        print(e)
+    
+    return jsonify(res), 200
+
 
 # Run the app
 if __name__ == '__main__':
