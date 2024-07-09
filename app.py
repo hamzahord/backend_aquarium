@@ -159,6 +159,7 @@ def aquarium_fish_creation():
 
 
 @app.route('/aqu/get', methods=['POST'])
+@jwt_required()
 def get_aquarium_user():
     data = request.get_json()
     user_id = data.get('user_id')
