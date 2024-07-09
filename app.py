@@ -107,7 +107,7 @@ def login():
     user = Utilisateur.query.filter_by(email=email).first()
     if user and user.check_password(password):
         access_token = create_access_token(identity=user.email)
-        return jsonify(access_token=access_token, username=user.username), 200
+        return jsonify(access_token=access_token, username=user.username, user_id=user.user_id), 200
 
     return jsonify({"msg": "Bad email or password"}), 401
 
@@ -135,6 +135,28 @@ def aquarium_creation():
     data = request.get_json()
     # Implement aquarium creation logic here
     return jsonify({"msg": "Aquarium created successfully"}), 200
+
+
+@app.route('/aqu/get', methods=['POST'])
+def get_aquarium_user():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    aquarium = Aquarium.query.filter_by(user_id=user_id).first()
+
+    if not aquarium:
+        return jsonify(None)
+
+    return jsonify({
+        'name': aquarium.name,
+        'user_id': aquarium.user_id,
+        'state': aquarium.state,
+        'max_ph': aquarium.max_ph,
+        'min_ph': aquarium.min_ph,
+        'max_temp': aquarium.max_temp,
+        'min_temp': aquarium.min_temp,
+        'nb_fish': aquarium.nb_fish
+    }), 200
 
 
 
