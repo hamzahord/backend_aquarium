@@ -130,11 +130,31 @@ def get_all_cat():
     cat_list = [{"id_cat": cat.id_cat, "categorie": cat.categorie} for cat in categories]
     return jsonify(cat_list), 200
 
-@app.route('/aqu/creation', methods=['POST'])
-def aquarium_creation():
+@app.route('/aqu/creation/', methods=['POST'])
+@jwt_required()
+def aquarium_fish_creation():
     data = request.get_json()
-    # Implement aquarium creation logic here
-    return jsonify({"msg": "Aquarium created successfully"}), 200
+    current_user = get_jwt_identity()
+    user = Utilisateur.query.filter_by(email=current_user).first()
+    
+    aquarium_name = data.get('aquarium_name')
+    fish_data = data.get('fish', [])
+    
+    if not aquarium_name or not fish_data:
+        return jsonify({"msg": "Aquarium name and fish data are required"}), 400
+    
+    new_aquarium = Aquarium(name=aquarium_name, user_id=user.user_id)
+    db.session.add(new_aquarium)
+    db.session.commit()
+    
+    for fish in fish_data:
+        id_cat = fish.get('id_cat')
+        new_fish = Fish(id_cat=id_cat, user_id=user.user_id)
+        db.session.add(new_fish)
+    
+    db.session.commit()
+    
+    return jsonify({"msg": "Aquarium and fish created successfully"}), 201
 
 
 @app.route('/aqu/get', methods=['POST'])
