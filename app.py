@@ -77,6 +77,8 @@ class AquaData(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
     ph = db.Column(db.Float)
     temperature = db.Column(db.Float)
+    luminosity = db.Column(db.Float)
+    turbidity = db.Column(db.Float)
     moment = db.Column(db.DateTime)
     aquarium_id = db.Column(db.Integer, db.ForeignKey('aquarium.aquarium_id'))
     user_id = db.Column(db.Integer, db.ForeignKey('utilisateur.user_id'))
