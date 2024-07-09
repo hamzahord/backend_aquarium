@@ -8,12 +8,16 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from collections import defaultdict
+<<<<<<< Updated upstream
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import joblib
 from tensorflow.keras.models import load_model
 
+=======
+from sqlalchemy import desc
+>>>>>>> Stashed changes
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -147,7 +151,7 @@ def aquarium_fish_creation():
     user = Utilisateur.query.filter_by(email=current_user).first()
     
     aquarium_name = data.get('aquarium_name')
-    fish_data = data.get('fish', [])
+    fish_data = data.get('fish_data', [])
     
     if not aquarium_name or not fish_data:
         return jsonify({"msg": "Aquarium name and fish data are required"}), 400
@@ -189,6 +193,7 @@ def get_aquarium_user():
     }), 200
 
 
+
 @app.route('/chart/aquadata', methods=['GET'])
 @jwt_required()
 def get_aquadata_for_charts():
@@ -197,6 +202,9 @@ def get_aquadata_for_charts():
 
     seven_days_ago = datetime.utcnow() - timedelta(days=9)
     aquadata_records = AquaData.query.filter(AquaData.user_id == user.user_id, AquaData.moment >= seven_days_ago).all()
+
+    if not aquadata_records:
+        return jsonify({}), 200
 
     data_by_day = defaultdict(lambda: {"ph": [], "temp": []})
 
@@ -207,7 +215,7 @@ def get_aquadata_for_charts():
 
     sorted_days = sorted(data_by_day.keys())
 
-    labels = [day.strftime("%Y-%m-%d %H:%M:%S") for day in sorted_days]
+    labels = [day.strftime("%m-%d") for day in sorted_days]
     data_ph = [data_by_day[day]["ph"][0] for day in sorted_days]  # Assuming one entry per day for simplicity
     data_temp = [data_by_day[day]["temp"][0] for day in sorted_days]  # Assuming one entry per day for simplicity
 
@@ -258,7 +266,58 @@ def predict_water_change_day(model, scaler, recent_data, seq_length=10, threshol
         return f'Dans {water_change_day} jours'
     
 
+<<<<<<< Updated upstream
 @app.route('/ia/predict/', methods=['GET'])
+=======
+@app.route('/card/aquadata', methods=['GET'])
+@jwt_required()
+def get_aquadata_for_card():
+    user_email = get_jwt_identity()
+    user = Utilisateur.query.filter_by(email=user_email).first()
+
+    if not user:
+        return jsonify({})
+
+    # Get the last two records for the user
+    aquadata_records = AquaData.query.filter_by(user_id=user.user_id).order_by(desc(AquaData.moment)).limit(2).all()
+
+    if len(aquadata_records) < 2:
+        return jsonify({})
+
+    # The most recent record
+    latest_record = aquadata_records[0]
+    # The second most recent record
+    previous_record = aquadata_records[1]
+
+    # Calculate percentage difference
+    def calculate_difference(new_value, old_value):
+        if old_value == 0:
+            return 0.0
+        return round(((new_value - old_value) / old_value) * 100, 1)
+
+    ph_difference = calculate_difference(latest_record.ph, previous_record.ph)
+    temp_difference = calculate_difference(latest_record.temperature, previous_record.temperature)
+
+    response_data = {
+        "ph": {
+            "last_value": latest_record.ph,
+            "update_date": latest_record.moment.strftime("%d/%m/%Y"),
+            "difference_j1": ph_difference
+        },
+        "temperature": {
+            "last_value": latest_record.temperature,
+            "update_date": latest_record.moment.strftime("%d/%m/%Y"),
+            "difference_j1": temp_difference
+        }
+    }
+
+    return jsonify(response_data), 200
+
+
+
+
+@app.route('/routes/protected/', methods=['GET'])
+>>>>>>> Stashed changes
 @jwt_required()
 def activate_prediction():
     aquadata = AquaData.query.all()
